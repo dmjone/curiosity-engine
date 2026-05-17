@@ -1,0 +1,76 @@
+# Build output
+curiosity-engine
+curiosity-engine.exe
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+dist/
+bin/
+
+# Vendored dependencies (we use modules, not vendor/)
+vendor/
+
+# Environment and credentials — never commit these
+.env
+.env.local
+.env.*.local
+*.json.secret
+service-account*.json
+*-credentials.json
+application_default_credentials.json
+
+# Go workspace files
+go.work
+go.work.sum
+
+# Test cache and coverage artifacts
+coverage.out
+coverage.html
+*.coverprofile
+
+# OS cruft
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Editor: JetBrains (keep .idea/ for shared run configs if the team uses it,
+# but ignore user-specific files inside it)
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries/
+.idea/**/shelf/
+.idea/**/contentModel.xml
+.idea/**/dataSources/
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+*.iml
+*.ipr
+
+# Editor: VS Code user-specific settings (keep .vscode/ for shared launch/tasks)
+.vscode/.ropeproject
+.vscode/settings.json.local
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# Air live-reload tool
+tmp/
+
+# Private project-strategy notes — never publish (kept local only).
+idea.md

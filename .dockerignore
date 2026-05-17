@@ -1,0 +1,42 @@
+# Version control
+.git
+.gitignore
+
+# CI/CD and deployment config (not needed inside the image)
+.github/
+deploy/
+cloudbuild.yaml
+
+# Documentation
+*.md
+idea.md
+
+# Local environment and credentials
+.env
+.env.*
+*.json.secret
+service-account*.json
+*-credentials.json
+application_default_credentials.json
+
+# Build artifacts from local builds
+curiosity-engine
+curiosity-engine.exe
+dist/
+bin/
+vendor/
+
+# Test artifacts
+coverage.out
+coverage.html
+*.coverprofile
+*.test
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+tmp/
