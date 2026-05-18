@@ -18,7 +18,11 @@ set -euo pipefail
 
 # ----- configuration -------------------------------------------------------
 PROJECT="${PROJECT:-dmjone}"
-REGION="${REGION:-us-central1}"
+REGION="${REGION:-asia-east1}"
+# Vertex AI region is kept independent of the Cloud Run region: the daily cron
+# is not latency-sensitive, and pinning Gemini to a region with guaranteed
+# model availability avoids a failed run if a model is absent in REGION.
+VERTEX_LOCATION="${VERTEX_LOCATION:-us-central1}"
 SERVICE="curiosity-engine"
 AR_REPO="curiosity"
 DOMAIN="curiosityengine.dmj.one"
@@ -111,15 +115,40 @@ gcloud secrets add-iam-policy-binding "$GITHUB_SECRET" \
   --member="serviceAccount:${RUNTIME_SA_EMAIL}" \
   --role="roles/secretmanager.secretAccessor" --quiet >/dev/null
 
-# ----- 6. build the image --------------------------------------------------
-say "Building image with Cloud Build"
-gcloud builds submit --tag "${IMAGE}:${TAG}" --quiet
-gcloud artifacts docker tags add "${IMAGE}:${TAG}" "${IMAGE}:latest" --quiet || true
+# ----- 6. build the image locally (no Docker daemon, no Cloud Build) -------
+# ko compiles the Go binary and assembles the OCI image entirely in the Go
+# toolchain on this machine, then pushes it straight to Artifact Registry.
+# Nothing billable runs: no Cloud Build, no build minutes.
+say "Building image locally with ko"
+# ko shells out to the Go toolchain, so `go` must be on PATH.
+if ! command -v go >/dev/null 2>&1; then
+  for godir in "/c/Program Files/Go/bin" "/usr/local/go/bin" "$HOME/go/bin"; do
+    if [ -x "$godir/go" ] || [ -x "$godir/go.exe" ]; then
+      export PATH="$godir:$PATH"
+      break
+    fi
+  done
+fi
+command -v go >/dev/null 2>&1 || { echo "ERROR: Go toolchain not found on PATH."; exit 1; }
+gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+KO="$(command -v ko 2>/dev/null || true)"
+for cand in "$HOME/go/bin/ko" "$HOME/go/bin/ko.exe"; do
+  [ -n "$KO" ] && break
+  [ -x "$cand" ] && KO="$cand"
+done
+if [ -z "$KO" ]; then
+  echo "ERROR: ko not found. Install it once with:"
+  echo "  go install github.com/google/ko@latest"
+  exit 1
+fi
+export KO_DOCKER_REPO="${IMAGE}"
+IMAGE_REF="$("$KO" build ./cmd/server --bare --tags="${TAG},latest" --platform=linux/amd64)"
+say "Built and pushed: ${IMAGE_REF}"
 
 # ----- 7. deploy Cloud Run (scale-to-zero) ---------------------------------
 say "Deploying Cloud Run service"
 gcloud run deploy "$SERVICE" \
-  --image="${IMAGE}:${TAG}" \
+  --image="${IMAGE_REF}" \
   --region="$REGION" \
   --service-account="$RUNTIME_SA_EMAIL" \
   --allow-unauthenticated \
@@ -130,7 +159,7 @@ gcloud run deploy "$SERVICE" \
   --cpu-boost \
   --concurrency=40 \
   --timeout=300 \
-  --set-env-vars="GCP_PROJECT=${PROJECT},VERTEX_LOCATION=${REGION},GEMINI_MODEL=${GEMINI_MODEL},FIRESTORE_DATABASE=(default),GITHUB_OWNER=${GITHUB_OWNER},GITHUB_REPO=${GITHUB_REPO},GITHUB_DEFAULT_BRANCH=${GITHUB_BRANCH}" \
+  --set-env-vars="GCP_PROJECT=${PROJECT},VERTEX_LOCATION=${VERTEX_LOCATION},GEMINI_MODEL=${GEMINI_MODEL},FIRESTORE_DATABASE=(default),GITHUB_OWNER=${GITHUB_OWNER},GITHUB_REPO=${GITHUB_REPO},GITHUB_DEFAULT_BRANCH=${GITHUB_BRANCH}" \
   --quiet
 
 URL="$(gcloud run services describe "$SERVICE" --region="$REGION" --format='value(status.url)')"

@@ -1,0 +1,10 @@
+# ko build configuration.
+#
+# ko builds the container image straight from the Go toolchain: no Docker
+# daemon, no Cloud Build, nothing billable. The runtime base is pinned to the
+# same distroless static image the Dockerfile uses, so a local ko build and a
+# Docker build produce an equivalent, non-root, shell-less runtime.
+#
+# The import path (./cmd/server) and build platform are passed on the ko
+# command line by deploy/deploy.sh.
+defaultBaseImage: gcr.io/distroless/static-debian12:nonroot

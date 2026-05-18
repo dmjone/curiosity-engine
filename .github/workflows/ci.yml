@@ -1,8 +1,9 @@
 name: CI
 
 # Runs on every pull request and on pushes to main.
-# Deployment is handled by the Cloud Build trigger, not here,
-# so no cloud credentials are needed in GitHub Actions.
+# This pipeline is CI only (vet, build, test, CodeQL). Deployment is a
+# deliberate local step (deploy/deploy.sh builds the image with ko), so no
+# cloud credentials are needed in GitHub Actions.
 on:
   push:
     branches: [main]

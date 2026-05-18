@@ -29,7 +29,7 @@ Once a day, Cloud Scheduler sends a single authenticated request to `/cron/daily
 | Secret Manager | Two secrets, two accesses per day. Fits free tier. |
 | Vertex AI (Gemini) | Billed per token. One daily run costs pennies. |
 | Cloud Scheduler | One job, one invocation per day. Free tier covers it. |
-| Cloud Build | Triggered on merge. Free tier: 120 build-minutes/day. |
+| Container build | Built locally with `ko` (Go toolchain, no Docker daemon). Nothing billable runs. |
 
 The only meaningful metered cost is Vertex AI token usage during the daily run, typically a few cents per day.
 
@@ -80,13 +80,19 @@ The service starts on `PORT` (default 8080). For Discord interactions locally, u
 
 ## Deploy
 
-Deployment is automated: merge to `main` triggers the [Cloud Build pipeline](cloudbuild.yaml), which builds the image, pushes it to Artifact Registry, and deploys to Cloud Run.
+The image is built locally with [`ko`](https://ko.build) (the Go toolchain assembles the container, no Docker daemon and no Cloud Build, so nothing billable runs). Install `ko` once:
 
-For first-time infrastructure setup, use the deploy script:
+```bash
+go install github.com/google/ko@latest
+```
+
+Then provision and deploy everything with the idempotent deploy script:
 
 ```bash
 bash deploy/deploy.sh
 ```
+
+It builds the image, pushes it to Artifact Registry, and deploys the Cloud Run service. Re-running it ships a new revision. GitHub Actions runs CI (vet, build, test, CodeQL) on every push and pull request; deployment is a deliberate, local step.
 
 The script is idempotent: safe to rerun on an existing deployment.
 
